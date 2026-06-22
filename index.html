@@ -579,47 +579,29 @@ function sampleSkinTone(callback){
     c.width = img.width; c.height = img.height;
     const cx = c.getContext('2d');
     cx.drawImage(img, 0, 0);
-
-    // 얼굴이 보통 위치하는 3개 영역(이마, 좌측볼, 우측볼)을 각각 샘플링
-    const patches = [
-      { x:0.40, y:0.20, w:0.20, h:0.10 }, // 이마 중앙
-      { x:0.27, y:0.40, w:0.16, h:0.14 }, // 좌측 볼
-      { x:0.57, y:0.40, w:0.16, h:0.14 }  // 우측 볼
-    ];
-
-    let rawPixels = [];
-    for(const p of patches){
-      const sx = Math.floor(img.width * p.x);
-      const sy = Math.floor(img.height * p.y);
-      const sw = Math.max(1, Math.floor(img.width * p.w));
-      const sh = Math.max(1, Math.floor(img.height * p.h));
-      try{
-        const data = cx.getImageData(sx, sy, sw, sh).data;
-        for(let i=0; i<data.length; i+=4){
-          rawPixels.push([data[i], data[i+1], data[i+2]]);
-        }
-      }catch(e){ /* 영역이 이미지 밖이면 건너뜀 */ }
+    // 얼굴이 보통 위치하는 중앙 상단~중앙 영역을 샘플링
+    const sx = Math.floor(img.width * 0.32);
+    const sy = Math.floor(img.height * 0.22);
+    const sw = Math.max(1, Math.floor(img.width * 0.36));
+    const sh = Math.max(1, Math.floor(img.height * 0.36));
+    let pixels;
+    try{
+      pixels = cx.getImageData(sx, sy, sw, sh).data;
+    }catch(e){
+      callback(null); return;
     }
-    if(rawPixels.length === 0){ callback(null); return; }
-
-    // 1차 평균 밝기로 극단값(그림자·머리카락·하이라이트) 픽셀 제외
-    const lumOf = (r,g,b)=> 0.299*r + 0.587*g + 0.114*b;
-    const lumList = rawPixels.map(([r,g,b])=>lumOf(r,g,b));
-    const rawAvgLum = lumList.reduce((a,v)=>a+v,0) / lumList.length;
-    const filtered = rawPixels.filter((_, i)=> Math.abs(lumList[i]-rawAvgLum) < 60 && lumList[i] > 30 && lumList[i] < 240);
-    const finalPixels = filtered.length >= rawPixels.length*0.3 ? filtered : rawPixels;
-
-    let rSum=0, gSum=0, bSum=0;
+    let rSum=0, gSum=0, bSum=0, n=0;
     const lumVals = [];
-    finalPixels.forEach(([r,g,b])=>{
+    for(let i=0; i<pixels.length; i+=4){
+      const r=pixels[i], g=pixels[i+1], b=pixels[i+2];
       rSum+=r; gSum+=g; bSum+=b;
-      lumVals.push(lumOf(r,g,b));
-    });
-    const n = finalPixels.length;
+      lumVals.push(0.299*r + 0.587*g + 0.114*b);
+      n++;
+    }
     const avgR = rSum/n, avgG = gSum/n, avgB = bSum/n;
     const avgLum = lumVals.reduce((a,v)=>a+v,0) / lumVals.length;
     const variance = lumVals.reduce((a,v)=>a + (v-avgLum)*(v-avgLum), 0) / lumVals.length;
-    callback({ r:avgR, g:avgG, b:avgB, avgLum, std: Math.sqrt(variance), sampleCount:n });
+    callback({ r:avgR, g:avgG, b:avgB, avgLum, std: Math.sqrt(variance) });
   };
   img.onerror = ()=> callback(null);
   img.src = "data:" + (state.imageMime || "image/jpeg") + ";base64," + state.imageBase64;
@@ -636,27 +618,14 @@ function runDiagnosis(answers, photo){
   });
 
   let photoNote;
-  let photoWeight = 0;
   if(photo){
     const warmthSignal = photo.r - photo.b; // R이 B보다 높으면 노란/황금빛(웜) 경향
-    // 신호가 강할수록 가중치가 커짐 (최대 8점, 설문 7문항 전체보다 더 크게 반영될 수 있음)
-    photoWeight = Math.min(8, Math.abs(warmthSignal) / 3);
+    if(warmthSignal > 12){ warm += 1.5; photoNote = "사진 속 피부는 전반적으로 노란빛·황금빛이 도는 톤으로 분석됐어요."; }
+    else if(warmthSignal < -12){ cool += 1.5; photoNote = "사진 속 피부는 전반적으로 푸른빛·핑크빛이 도는 톤으로 분석됐어요."; }
+    else { photoNote = "사진상 피부 언더톤은 웜과 쿨의 중간 정도로 분석됐어요."; }
 
-    if(warmthSignal > 6){
-      warm += photoWeight;
-      photoNote = `사진 속 피부는 노란빛·황금빛이 도는 톤으로 측정됐어요 (신호 강도 ${photoWeight.toFixed(1)}점 반영).`;
-    } else if(warmthSignal < -6){
-      cool += photoWeight;
-      photoNote = `사진 속 피부는 푸른빛·핑크빛이 도는 톤으로 측정됐어요 (신호 강도 ${photoWeight.toFixed(1)}점 반영).`;
-    } else {
-      photoNote = "사진상 피부 언더톤은 웜과 쿨의 중간 정도라 판단을 설문 쪽에 더 맡겼어요.";
-    }
-
-    // 명도 대비(딥/소프트)도 표준편차 신호 강도에 비례해 반영
-    const stdSignal = photo.std - 35; // 35를 중간 기준으로 사용
-    const depthWeight = Math.min(5, Math.abs(stdSignal) / 6);
-    if(stdSignal > 5) deep += depthWeight;
-    else if(stdSignal < -5) soft += depthWeight;
+    if(photo.std > 45) deep += 0.7;
+    else if(photo.std < 25) soft += 0.7;
   } else {
     photoNote = "사진 분석 없이 설문 응답만으로 판단했어요.";
   }
@@ -673,7 +642,7 @@ function runDiagnosis(answers, photo){
   const axisGap = Math.abs(warm - cool);
   const confidence = axisGap >= 3 ? "높음" : axisGap >= 1.5 ? "중간" : "낮음";
 
-  const reasoning = `설문 7문항과 사진 분석을 합산해 웜톤 ${warm.toFixed(1)}점, 쿨톤 ${cool.toFixed(1)}점으로 ${isWarm ? '웜' : '쿨'} 경향이 더 우세했어요. 명도대비는 ${isDeep ? '또렷한 대비(딥)' : '부드러운 대비(소프트)'} 쪽에 더 가까웠어요. ${photoNote}`;
+  const reasoning = `설문 7문항 중 웜톤 신호 ${warm.toFixed(1)}개, 쿨톤 신호 ${cool.toFixed(1)}개로 ${isWarm ? '웜' : '쿨'} 경향이 더 우세했고, 명도대비 응답은 ${isDeep ? '또렷한 대비(딥)' : '부드러운 대비(소프트)'} 쪽에 더 가까웠어요. ${photoNote}`;
 
   const tipMap = {
     spring: "조명이 밝은 세트에서는 톤이 묻히지 않도록 또렷한 코랄·오렌지 계열 의상으로 생기를 살려보세요.",

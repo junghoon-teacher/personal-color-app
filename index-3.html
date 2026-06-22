@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>온에어 컬러 — 아나운서 퍼스널컬러 진단</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@500;700&family=Pretendard:wght@400;500;600;700&display=swap');
+
+  :root{
+    --ink:#161512;
+    --paper:#f4f0e6;
+    --tally:#c4392b;
+    --gold:#b8923f;
+    --cool:#36606b;
+    --line: rgba(22,21,18,0.14);
+    --card: #fffdf8;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family:'Pretendard', -apple-system, sans-serif;
+    background:var(--paper);
+    color:var(--ink);
+    line-height:1.55;
+  }
+  .wrap{max-width:880px;margin:0 auto;padding:0 24px 120px;}
+
+  /* HERO */
+  .hero{
+    background:var(--ink);
+    color:var(--paper);
+    padding:64px 24px 56px;
+    position:relative;
+    overflow:hidden;
+  }
+  .hero::before{
+    content:"";
+    position:absolute; top:24px; right:24px;
+    width:14px; height:14px; border-radius:50%;
+    background:var(--tally);
+    box-shadow:0 0 18px 4px rgba(196,57,43,0.65);
+  }
+  .hero .tag{
+    font-size:13px; letter-spacing:0.18em; text-transform:uppercase;
+    color:var(--gold); font-weight:600; margin-bottom:18px;
+  }
+  .hero h1{
+    font-family:'Noto Serif KR', serif;
+    font-size:clamp(32px,5vw,48px);
+    margin:0 0 16px;
+    font-weight:700;
+    letter-spacing:-0.01em;
+  }
+  .hero p{
+    max-width:520px; color:rgba(244,240,230,0.78); font-size:15.5px; margin:0;
+  }
+  .hero .grid-deco{
+    position:absolute; inset:0; opacity:0.06;
+    background-image: repeating-linear-gradient(0deg, transparent, transparent 39px, var(--paper) 40px),
+                       repeating-linear-gradient(90deg, transparent, transparent 39px, var(--paper) 40px);
+    pointer-events:none;
+  }
+
+  /* STEP NAV */
+  .steps{
+    display:flex; gap:0; margin:40px 0 32px; border-bottom:1px solid var(--line);
+  }
+  .step-pill{
+    flex:1; text-align:center; padding:14px 8px; font-size:13.5px; font-weight:600;
+    color:rgba(22,21,18,0.4); border-bottom:2px solid transparent; cursor:default;
+    display:flex; align-items:center; justify-content:center; gap:8px;
+  }
+  .step-pill .n{
+    width:20px;height:20px;border-radius:50%;border:1.5px solid currentColor;
+    font-size:11px; display:flex; align-items:center; justify-content:center; flex-shrink:0;
+  }
+  .step-pill.active{ color:var(--ink); border-bottom-color:var(--tally); }
+  .step-pill.done{ color:var(--gold); }
+
+  .panel{display:none;}
+  .panel.active{display:block; animation:fade .35s ease;}
+  @keyframes fade{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+
+  h2.section-title{
+    font-family:'Noto Serif KR', serif; font-size:22px; margin:0 0 6px;
+  }
+  .section-sub{color:rgba(22,21,18,0.55); font-size:14px; margin:0 0 28px;}
+
+  /* QUIZ */
+  .q-card{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:22px 22px 18px; margin-bottom:16px;
+  }
+  .q-card .q-title{font-weight:600; font-size:15px; margin-bottom:14px;}
+  .opt-row{display:flex; flex-wrap:wrap; gap:8px;}
+  .opt{
+    border:1px solid var(--line); background:transparent; border-radius:999px;
+    padding:9px 16px; font-size:13.5px; cursor:pointer; transition:all .15s; color:var(--ink);
+    font-family:inherit;
+  }
+  .opt:hover{border-color:var(--gold);}
+  .opt.sel{background:var(--ink); color:var(--paper); border-color:var(--ink);}
+
+  /* UPLOAD */
+  .upload-options{display:grid; grid-template-columns:1fr 1fr; gap:12px;}
+  @media(max-width:480px){ .upload-options{grid-template-columns:1fr;} }
+  .upload-option{
+    border:1.5px dashed var(--line); border-radius:16px; padding:28px 16px;
+    text-align:center; cursor:pointer; background:var(--card); transition:border-color .2s, background .2s;
+  }
+  .upload-option:hover{border-color:var(--gold); background:#fffaf0;}
+  .upload-option input{display:none;}
+  .upload-option .icon{font-size:28px; margin-bottom:8px;}
+  .upload-option .label{font-weight:700; font-size:14.5px;}
+  .upload-option .hint{font-size:12px; color:rgba(22,21,18,0.5); margin-top:4px;}
+  .small-note{font-size:12px; color:rgba(22,21,18,0.45); line-height:1.5;}
+  #preview-wrap{display:none; text-align:center; margin-top:18px;}
+  #preview-wrap img{max-width:260px; border-radius:12px; border:1px solid var(--line);}
+
+  .btn{
+    display:inline-flex; align-items:center; gap:8px;
+    background:var(--ink); color:var(--paper); border:none; border-radius:999px;
+    padding:13px 26px; font-size:14.5px; font-weight:600; cursor:pointer;
+    font-family:inherit; transition:transform .15s, opacity .15s;
+  }
+  .btn:hover{transform:translateY(-1px);}
+  .btn:disabled{opacity:0.4; cursor:not-allowed; transform:none;}
+  .btn.ghost{background:transparent; color:var(--ink); border:1px solid var(--line);}
+  .btn-row{display:flex; justify-content:space-between; margin-top:28px;}
+
+  /* LOADING */
+  .loading-box{display:none; text-align:center; padding:50px 0; color:rgba(22,21,18,0.6); font-size:14px;}
+  .loading-box.active{display:block;}
+  .spin{
+    width:34px;height:34px;border-radius:50%;
+    border:3px solid var(--line); border-top-color:var(--tally);
+    animation:spin 0.9s linear infinite; margin:0 auto 16px;
+  }
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* RESULT */
+  .result-hero{
+    background:var(--ink); color:var(--paper); border-radius:18px; padding:32px;
+    display:flex; gap:24px; align-items:center; margin-bottom:24px; flex-wrap:wrap;
+  }
+  .result-hero .swatch-big{
+    width:76px;height:76px;border-radius:50%; flex-shrink:0; border:3px solid rgba(244,240,230,0.2);
+  }
+  .result-hero .type-name{font-family:'Noto Serif KR',serif; font-size:26px; margin:0 0 6px;}
+  .result-hero .type-desc{font-size:13.5px; color:rgba(244,240,230,0.75); margin:0; max-width:480px;}
+
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:14px; padding:22px; margin-bottom:18px;
+  }
+  .card h3{font-size:15px; margin:0 0 14px; font-weight:700;}
+  .card h3 .eyebrow{display:block; font-size:11px; letter-spacing:0.12em; color:var(--gold); text-transform:uppercase; margin-bottom:4px; font-weight:600;}
+
+  .palette-row{display:flex; gap:10px; flex-wrap:wrap;}
+  .palette-chip{text-align:center; font-size:11px; color:rgba(22,21,18,0.6);}
+  .palette-chip .dot{width:42px;height:42px;border-radius:10px; margin-bottom:6px; border:1px solid var(--line);}
+
+  .reco-list{margin:0; padding:0; list-style:none;}
+  .reco-list li{padding:8px 0; border-bottom:1px solid var(--line); font-size:14px; display:flex; gap:10px;}
+  .reco-list li:last-child{border-bottom:none;}
+  .reco-list li .lbl{font-weight:600; min-width:84px; flex-shrink:0; color:var(--cool);}
+
+  .reset-link{display:block; text-align:center; margin-top:30px; font-size:13px; color:rgba(22,21,18,0.5); cursor:pointer; text-decoration:underline;}
+</style>
+</head>
+<body>
+
+<div class="hero">
+  <div class="grid-deco"></div>
+  <div class="tag">● ON AIR · Personal Color Lab_정훈쌤</div>
+  <h1>카메라가 가장<br>좋아하는 색을 찾다</h1>
+  <p>아나운서·방송 지망생을 위한 퍼스널컬러 진단. 사진 한 장과 짧은 질문으로 웜/쿨 톤과 어울리는 의상·메이크업·헤어 컬러를 분석합니다.</p>
+</div>
+
+<div class="wrap">
+
+  <div class="steps">
+    <div class="step-pill active" data-step="0"><span class="n">1</span> 진단 질문</div>
+    <div class="step-pill" data-step="1"><span class="n">2</span> 얼굴 사진</div>
+    <div class="step-pill" data-step="2"><span class="n">3</span> 결과</div>
+  </div>
+
+  <!-- STEP 0: QUIZ -->
+  <div class="panel active" id="panel-0">
+    <h2 class="section-title">기초 진단 질문</h2>
+    <p class="section-sub">총 11문항(컬러 7 + 얼굴형 4), 2~3분이면 충분합니다. 직관적으로 답해주세요.</p>
+    <h3 style="font-size:14px; margin:24px 0 10px; color:var(--gold); text-transform:uppercase; letter-spacing:0.08em;">컬러 진단</h3>
+    <div id="quiz-container"></div>
+    <h3 style="font-size:14px; margin:28px 0 10px; color:var(--gold); text-transform:uppercase; letter-spacing:0.08em;">얼굴형 진단</h3>
+    <div id="face-quiz-container"></div>
+    <div class="btn-row">
+      <span></span>
+      <button class="btn" id="to-step-1" disabled>사진 업로드로 →</button>
+    </div>
+  </div>
+
+  <!-- STEP 1: UPLOAD -->
+  <div class="panel" id="panel-1">
+    <h2 class="section-title">얼굴 사진 업로드</h2>
+    <p class="section-sub">정면, 자연광, 메이크업 없는 상태가 가장 정확합니다.<br>밝은 조명에서 실제 피부톤과 가까운 사진을 올려야 정확한 진단이 가능합니다.</p>
+    <div class="upload-options">
+      <label class="upload-option" id="capture-zone">
+        <input type="file" accept="image/*" capture="environment" id="capture-input">
+        <div class="icon">📸</div>
+        <div class="label">사진 촬영하기</div>
+        <div class="hint">카메라가 바로 켜져요</div>
+      </label>
+      <label class="upload-option" id="gallery-zone">
+        <input type="file" accept="image/*" id="gallery-input">
+        <div class="icon">🖼️</div>
+        <div class="label">사진첩에서 선택</div>
+        <div class="hint">PC는 파일 탐색기, 모바일은 갤러리</div>
+      </label>
+    </div>
+    <p class="small-note" style="text-align:center; margin-top:10px;">JPG · PNG · HEIC 지원(자동 변환) · 얼굴이 화면의 60% 이상을 채우면 좋아요</p>
+    <div id="preview-wrap"><img id="preview-img"></div>
+    <div class="btn-row">
+      <button class="btn ghost" id="back-to-0">← 이전</button>
+      <button class="btn" id="run-diagnosis" disabled>진단 시작 →</button>
+    </div>
+    <div class="loading-box" id="loading-box">
+      <div class="spin"></div>
+      피부 톤 픽셀과 답변을 함께 분석하는 중...
+    </div>
+    <div id="debug-box" style="display:none; margin-top:16px; padding:14px; background:#fff3f0; border:1px solid #e0a89a; border-radius:10px; font-size:12px; white-space:pre-wrap; word-break:break-all; color:#7a2b1f;"></div>
+  </div>
+
+  <!-- STEP 2: RESULT -->
+  <div class="panel" id="panel-2">
+    <div id="result-content"></div>
+    <div class="btn-row">
+      <button class="btn ghost" id="back-to-1">← 다시 진단</button>
+      <span></span>
+    </div>
+  </div>
+
+  <div class="reset-link" id="reset-all">처음부터 다시 진단하기</div>
+</div>
+
+<script>
+// ---------------- DATA ----------------
+const QUIZ = [
+  {
+    key: "skinTexture",
+    q: "피부 두께와 투명도는 어느 쪽에 가깝나요?",
+    opts: [
+      {label:"도톰하고 매트해서 혈관·잡티가 잘 안 보임", val:"warm"},
+      {label:"얇고 투명해서 혈관·홍조가 잘 비쳐 보임", val:"cool"},
+      {label:"보통 정도, 딱히 도톰하거나 얇지 않음", val:"neutral"}
+    ]
+  },
+  {
+    key:"jewelry",
+    q:"금(골드)과 은(실버) 액세서리, 얼굴이 더 화사해 보이는 쪽은?",
+    opts:[
+      {label:"골드 — 피부에 윤기와 생기가 더해짐", val:"warm"},
+      {label:"실버 — 피부가 더 화사하고 또렷해 보임", val:"cool"},
+      {label:"둘 다 비슷하게 잘 어울림", val:"neutral"}
+    ]
+  },
+  {
+    key:"achromatic",
+    q:"무채색 옷(블랙·화이트)을 입었을 때 얼굴빛은?",
+    opts:[
+      {label:"순백색·블랙을 입으면 또렷하고 화사해짐", val:"cool"},
+      {label:"순백색·블랙을 입으면 다소 칙칙하거나 날카로워 보임", val:"warm"},
+      {label:"오프화이트·그레이가 무채색보다 더 잘 받음", val:"warm"}
+    ]
+  },
+  {
+    key:"darkCircle",
+    q:"다크서클이나 눈 밑 그늘 색은 어느 쪽에 가깝나요?",
+    opts:[
+      {label:"브라운·황토빛에 가까움", val:"warm"},
+      {label:"퍼플·블루빛에 가까움", val:"cool"},
+      {label:"색이 옅어서 잘 구분되지 않음", val:"neutral"}
+    ]
+  },
+  {
+    key:"lipColor",
+    q:"입술 자체의 본래 색(립스틱 안 바른 상태)은 어느 쪽에 가깝나요?",
+    opts:[
+      {label:"오렌지·코랄빛이 도는 살구색", val:"warm"},
+      {label:"핑크·로즈빛이 도는 붉은색", val:"cool"},
+      {label:"베이지·브라운에 가까운 옅은 색", val:"neutral"}
+    ]
+  },
+  {
+    key:"eyeColor",
+    q:"눈동자 색은 어느 쪽에 가깝나요?",
+    opts:[
+      {label:"밝은 갈색·황갈색(빛에 비치면 노란빛)", val:"warm"},
+      {label:"짙은 흑갈색·블랙브라운", val:"deep"},
+      {label:"회갈색·그레이빛이 도는 갈색", val:"cool"}
+    ]
+  },
+  {
+    key:"contrast",
+    q:"피부색과 눈동자·머리카락 색의 명도 대비는 어느 쪽에 가깝나요?",
+    opts:[
+      {label:"대비가 크다 — 피부는 밝고 눈·머리는 진하고 또렷함", val:"deep"},
+      {label:"대비가 작다 — 전체적으로 톤이 부드럽게 비슷함", val:"soft"},
+      {label:"중간 정도 — 뚜렷하지도 흐릿하지도 않음", val:"neutral"}
+    ]
+  }
+];
+
+const FACE_QUIZ = [
+  {
+    key:"faceLength",
+    q:"거울을 보고 얼굴의 세로 길이와 가로 너비를 비교해보세요.",
+    opts:[
+      {label:"세로 길이가 가로보다 뚜렷하게 길다", val:"long"},
+      {label:"세로·가로 길이가 비슷한 편이다", val:"balanced"},
+      {label:"가로 너비가 길이만큼 넓게 느껴진다", val:"wide"}
+    ]
+  },
+  {
+    key:"jawLine",
+    q:"턱선의 모양은 어느 쪽에 가깝나요?",
+    opts:[
+      {label:"각이 진 사각턱에 가깝다", val:"square"},
+      {label:"둥글고 부드러운 곡선이다", val:"round"},
+      {label:"좁고 뾰족한 V라인에 가깝다", val:"pointed"}
+    ]
+  },
+  {
+    key:"cheekJaw",
+    q:"광대와 아래턱 중 더 도드라지는 부위는?",
+    opts:[
+      {label:"광대뼈가 더 도드라진다", val:"cheek"},
+      {label:"아래턱(하악) 라인이 더 발달했다", val:"jaw"},
+      {label:"광대와 턱이 비슷한 느낌이다", val:"even"}
+    ]
+  },
+  {
+    key:"forehead",
+    q:"이마 너비는 어느 쪽에 가깝나요?",
+    opts:[
+      {label:"넓고 시원한 이마", val:"wide"},
+      {label:"좁거나 헤어라인이 둥글게 낮은 이마", val:"narrow"},
+      {label:"보통 너비", val:"medium"}
+    ]
+  }
+];
+
+const FACE_SHAPE_INFO = {
+  oval: {
+    name:"계란형",
+    desc:"이마·광대·턱의 비율이 균형 잡혀 있어 대부분의 헤어스타일을 무리 없이 소화하는 얼굴형이에요.",
+    tips:[
+      "단발부터 롱헤어까지 길이 제약이 적으니 원하는 이미지에 맞춰 자유롭게 선택해도 좋아요",
+      "가르마는 5:5, 6:4, 7:3 어떤 비율도 무난하게 어울려요",
+      "다만 너무 무거운 일자 뱅은 비율을 답답하게 만들 수 있어 피하는 게 좋아요"
+    ]
+  },
+  round: {
+    name:"둥근형",
+    desc:"가로·세로 길이가 비슷하고 얼굴선이 부드러운 곡선이라, 세로로 길어 보이게 하는 스타일링이 핵심이에요.",
+    tips:[
+      "턱선까지 오는 단발이나 가슴 아래로 내려오는 롱 길이가 좋고, 애매한 중간 길이는 얼굴형을 더 부각할 수 있어요",
+      "정수리 볼륨을 살리는 뿌리펌이나 레이어드 C컬로 세로 라인을 강조해보세요",
+      "5:5 정가르마보다는 6:4 가르마가 얼굴을 갸름하게 보여줘요"
+    ]
+  },
+  long: {
+    name:"긴형",
+    desc:"이마부터 턱까지 굴곡 없이 길게 떨어지는 얼굴형으로, 가로 볼륨을 더해 길이감을 분산시키는 게 포인트예요.",
+    tips:[
+      "눈썹 라인 정도로 내려오는 시스루뱅 앞머리로 얼굴 길이를 시각적으로 줄여보세요",
+      "옆으로 자연스러운 S웨이브나 볼륨펌으로 가로 폭을 넓혀주면 균형이 맞아요",
+      "정수리에 과한 볼륨을 주는 스타일이나 일자 스트레이트 롱은 얼굴이 더 길어 보일 수 있어 피하는 게 좋아요"
+    ]
+  },
+  square: {
+    name:"각진형(사각형)",
+    desc:"이마와 턱의 너비가 비슷하고 턱선에 각이 있는 얼굴형으로, 부드러운 웨이브로 각을 풀어주는 게 핵심이에요.",
+    tips:[
+      "턱선이나 입술선 길이의 단발에 끝을 안으로 말아주는 보브가 각진 라인을 부드럽게 가려줘요",
+      "굵은 웨이브가 들어간 미디~롱 레이어드 컷으로 부드러운 인상을 더해보세요",
+      "일자 앞머리나 5:5 정가르마는 각진 턱을 더 강조하니 피하고 6:4 가르마를 추천해요"
+    ]
+  },
+  inverted: {
+    name:"역삼각형",
+    desc:"이마와 광대는 넓고 턱은 갸름한 얼굴형으로, 턱선 라인에 볼륨을 더해 균형을 맞추는 게 포인트예요.",
+    tips:[
+      "턱 아래로 내려오는 단발에 아웃컬이나 S컬을 줘서 턱선을 풍성하게 보완해보세요",
+      "이마가 넓다면 시스루뱅으로 가볍게 가려주는 것도 좋은 방법이에요",
+      "정수리 볼륨이 과한 스타일은 이마·광대를 더 강조할 수 있어 주의가 필요해요"
+    ]
+  },
+  heart: {
+    name:"하트형",
+    desc:"넓은 이마와 뾰족한 턱이 특징인 얼굴형으로, 턱선 쪽에 시선을 분산시키는 스타일링이 좋아요.",
+    tips:[
+      "광대와 턱 사이에 볼륨을 주는 미디엄 길이의 레이어드 컷을 추천해요",
+      "옆머리를 자연스럽게 흘려 광대를 감싸주면 이마와 턱의 비율이 부드러워져요",
+      "이마를 다 드러내는 올백 스타일보다는 가벼운 시스루뱅이 더 안정적인 인상을 줘요"
+    ]
+  },
+  diamond: {
+    name:"마름모형",
+    desc:"좁은 이마, 도드라진 광대, 갸름한 턱이 특징인 얼굴형으로, 이마와 턱 쪽에 볼륨을 더해 균형을 맞추는 게 핵심이에요.",
+    tips:[
+      "이마를 살짝 덮는 가벼운 앞머리로 좁은 이마를 보완해보세요",
+      "턱선 부근에 볼륨을 주는 단발이나 미디 길이가 갸름한 턱을 부드럽게 채워줘요",
+      "광대 부분에 머리가 딱 붙는 타이트한 스타일은 광대를 더 강조하니 피하는 게 좋아요"
+    ]
+  }
+};
+
+function computeFaceShape(answers){
+  const a = answers;
+  if(a.faceLength === 'long') return 'long';
+  if(a.jawLine === 'square' && a.cheekJaw !== 'cheek') return 'square';
+  if(a.cheekJaw === 'cheek' && a.jawLine === 'pointed'){
+    return a.forehead === 'wide' ? 'inverted' : 'heart';
+  }
+  if(a.cheekJaw === 'cheek' && a.forehead === 'narrow') return 'diamond';
+  if(a.jawLine === 'round' && a.faceLength !== 'long') return 'round';
+  return 'oval';
+}
+
+const SEASON_INFO = {
+  spring: {
+
+    name:"봄 웜 (Spring Warm)",
+    color:"#e8a23a",
+    desc:"화사하고 생기있는 인상. 카메라 앞에서 밝고 또렷한 발색이 강점입니다.",
+    palette:["#f4c460","#e8a23a","#d97b4a","#9bbf65","#e6cba8"],
+    clothing:["코랄, 피치, 아이보리, 카멜 계열","골드 톤 액세서리","과한 그레이·블루 계열은 피하기"],
+    makeup:["오렌지·코랄 베이스 블러셔","웜 브라운 아이섀도우","글로시한 코랄 립"],
+    hairColor:["#8a5a36","#a9713f","#caa06a"],
+    hairStyle:["턱선 위아래의 단발이나 가벼운 레이어드 컷으로 화사한 인상을 강조해보세요","C컬·끝 웨이브 펌으로 부드러운 볼륨을 더하면 생기가 살아나요","무겁고 어두운 단일 컬러보다 밝은 브라운 계열이 더 잘 어울려요"]
+  },
+  summer: {
+    name:"여름 쿨 (Summer Cool)",
+    color:"#8aa4b1",
+    desc:"부드럽고 우아한 인상. 차분한 파스텔 톤에서 신뢰감이 살아납니다.",
+    palette:["#a9c0c9","#8aa4b1","#c98a9b","#9aa8c2","#e4dfe6"],
+    clothing:["라벤더, 로즈, 그레이시 블루","실버 톤 액세서리","과한 오렌지·머스타드는 피하기"],
+    makeup:["로즈·핑크 베이스 블러셔","그레이시 브라운 아이섀도우","MLBB 로즈 립"],
+    hairColor:["#5c4a4a","#3f3a3d","#7a6a6e"],
+    hairStyle:["차분한 단발이나 어깨선 길이의 미디 컷이 우아한 인상과 잘 맞아요","과한 볼륨보다 자연스럽게 떨어지는 스트레이트나 약한 웨이브를 추천해요","애쉬·그레이시 브라운 계열로 톤을 맞추면 한층 정돈된 느낌을 줘요"]
+  },
+  autumn: {
+    name:"가을 웜 (Autumn Warm)",
+    color:"#a05a2c",
+    desc:"깊고 차분한 인상. 다큐·시사 진행에서 안정감 있는 신뢰감을 줍니다.",
+    palette:["#a05a2c","#7a4a2a","#c98c3a","#6b7a4a","#caa46a"],
+    clothing:["카키, 머스타드, 브릭, 카멜","앤틱 골드 액세서리","쨍한 비비드 핑크/블루는 피하기"],
+    makeup:["테라코타 블러셔","올리브·브라운 아이섀도우","브릭·테라코타 립"],
+    hairColor:["#3d2a1f","#5a3a26","#7a4f2e"],
+    hairStyle:["어깨를 덮는 미디~롱 길이로 차분하고 안정된 인상을 만들어보세요","굵은 웨이브나 볼륨 매직으로 무게감 있는 스타일을 살리면 좋아요","다크 초콜릿이나 카키브라운처럼 깊고 차분한 컬러가 잘 어울려요"]
+  },
+  winter: {
+    name:"겨울 쿨 (Winter Cool)",
+    color:"#2b3a55",
+    desc:"또렷하고 강렬한 인상. 뉴스·시사 등 명확한 전달력이 필요한 포맷에 강점.",
+    palette:["#1b1f2b","#2b3a55","#7a2b3a","#3a3a3a","#c9c9d4"],
+    clothing:["블랙, 네이비, 와인, 퓨어 화이트","실버·플래티넘 액세서리","베이지·카멜은 다소 밋밋해 보일 수 있음"],
+    makeup:["쿨 핑크·플럼 블러셔","그레이·블랙 아이섀도우","와인·블루레드 립"],
+    hairColor:["#0e0e0e","#241f24","#3a2f3a"],
+    hairStyle:["선이 또렷한 단발이나 깔끔한 포니테일로 또렷한 인상을 살려보세요","과한 곱슬보다 직모에 가까운 스트레이트나 살짝의 C컬이 더 깔끔해 보여요","블랙이나 다크 버건디처럼 명도 대비가 큰 컬러가 강점을 더해줘요"]
+  }
+};
+
+// ---------------- STATE ----------------
+let state = {
+  step:0,
+  quizAnswers:{},
+  imageBase64:null,
+  imageMime:null,
+  result:null
+};
+
+// ---------------- QUIZ RENDER ----------------
+function renderQuizGroup(list, containerId){
+  const container = document.getElementById(containerId);
+  list.forEach((item, qi)=>{
+    const card = document.createElement('div');
+    card.className='q-card';
+    card.innerHTML = `<div class="q-title">${qi+1}. ${item.q}</div><div class="opt-row"></div>`;
+    const row = card.querySelector('.opt-row');
+    item.opts.forEach(opt=>{
+      const btn = document.createElement('button');
+      btn.className='opt';
+      btn.textContent = opt.label;
+      btn.onclick = ()=>{
+        row.querySelectorAll('.opt').forEach(b=>b.classList.remove('sel'));
+        btn.classList.add('sel');
+        state.quizAnswers[item.key] = opt.val;
+        checkQuizComplete();
+      };
+      row.appendChild(btn);
+    });
+    container.appendChild(card);
+  });
+}
+renderQuizGroup(QUIZ, 'quiz-container');
+renderQuizGroup(FACE_QUIZ, 'face-quiz-container');
+
+function checkQuizComplete(){
+  const allQuestions = QUIZ.concat(FACE_QUIZ);
+  const done = allQuestions.every(q => state.quizAnswers[q.key] !== undefined);
+  document.getElementById('to-step-1').disabled = !done;
+}
+
+// ---------------- STEP NAV ----------------
+function goToStep(n){
+  state.step = n;
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+n).classList.add('active');
+  document.querySelectorAll('.step-pill').forEach(p=>{
+    const ps = parseInt(p.dataset.step);
+    p.classList.remove('active','done');
+    if(ps < n) p.classList.add('done');
+    if(ps === n) p.classList.add('active');
+  });
+}
+
+document.getElementById('to-step-1').onclick = ()=> goToStep(1);
+document.getElementById('back-to-0').onclick = ()=> goToStep(0);
+document.getElementById('back-to-1').onclick = ()=> goToStep(1);
+document.getElementById('reset-all').onclick = ()=>{
+  location.reload();
+};
+
+// ---------------- UPLOAD ----------------
+function handleFileSelect(file){
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    const dataUrl = reader.result;
+    const img = new Image();
+    img.onload = ()=>{
+      // 캔버스에 다시 그려 JPEG로 강제 변환 (HEIC 등 API 미지원 포맷 대응)
+      const MAX_DIM = 1280;
+      let w = img.width, h = img.height;
+      if(w > MAX_DIM || h > MAX_DIM){
+        const ratio = Math.min(MAX_DIM/w, MAX_DIM/h);
+        w = Math.round(w*ratio); h = Math.round(h*ratio);
+      }
+      const tmp = document.createElement('canvas');
+      tmp.width = w; tmp.height = h;
+      tmp.getContext('2d').drawImage(img, 0, 0, w, h);
+      const jpegDataUrl = tmp.toDataURL('image/jpeg', 0.9);
+      state.imageMime = 'image/jpeg';
+      state.imageBase64 = jpegDataUrl.split(',')[1];
+      document.getElementById('preview-img').src = jpegDataUrl;
+      document.getElementById('preview-wrap').style.display='block';
+      document.getElementById('run-diagnosis').disabled = false;
+    };
+    img.onerror = ()=>{
+      alert("이 이미지 형식은 브라우저에서 미리보기를 지원하지 않습니다 (예: HEIC가 일부 브라우저에서 안 열릴 수 있어요). JPG 또는 PNG로 변환 후 다시 업로드해주세요.");
+    };
+    img.src = dataUrl;
+  };
+  reader.readAsDataURL(file);
+}
+
+document.getElementById('capture-input').onchange = (e)=> handleFileSelect(e.target.files[0]);
+document.getElementById('gallery-input').onchange = (e)=> handleFileSelect(e.target.files[0]);
+
+// ---------------- DIAGNOSIS (local rule-based, no network call) ----------------
+
+// 사진에서 피부 영역(중앙부)을 샘플링해 평균 색상과 명도 대비를 추출
+function sampleSkinTone(callback){
+  if(!state.imageBase64){ callback(null); return; }
+  const img = new Image();
+  img.onload = ()=>{
+    const c = document.createElement('canvas');
+    c.width = img.width; c.height = img.height;
+    const cx = c.getContext('2d');
+    cx.drawImage(img, 0, 0);
+
+    // 얼굴이 보통 위치하는 3개 영역(이마, 좌측볼, 우측볼)을 각각 샘플링
+    const patches = [
+      { x:0.40, y:0.20, w:0.20, h:0.10 }, // 이마 중앙
+      { x:0.27, y:0.40, w:0.16, h:0.14 }, // 좌측 볼
+      { x:0.57, y:0.40, w:0.16, h:0.14 }  // 우측 볼
+    ];
+
+    let rawPixels = [];
+    for(const p of patches){
+      const sx = Math.floor(img.width * p.x);
+      const sy = Math.floor(img.height * p.y);
+      const sw = Math.max(1, Math.floor(img.width * p.w));
+      const sh = Math.max(1, Math.floor(img.height * p.h));
+      try{
+        const data = cx.getImageData(sx, sy, sw, sh).data;
+        for(let i=0; i<data.length; i+=4){
+          rawPixels.push([data[i], data[i+1], data[i+2]]);
+        }
+      }catch(e){ /* 영역이 이미지 밖이면 건너뜀 */ }
+    }
+    if(rawPixels.length === 0){ callback(null); return; }
+
+    // 1차 평균 밝기로 극단값(그림자·머리카락·하이라이트) 픽셀 제외
+    const lumOf = (r,g,b)=> 0.299*r + 0.587*g + 0.114*b;
+    const lumList = rawPixels.map(([r,g,b])=>lumOf(r,g,b));
+    const rawAvgLum = lumList.reduce((a,v)=>a+v,0) / lumList.length;
+    const filtered = rawPixels.filter((_, i)=> Math.abs(lumList[i]-rawAvgLum) < 60 && lumList[i] > 30 && lumList[i] < 240);
+    const finalPixels = filtered.length >= rawPixels.length*0.3 ? filtered : rawPixels;
+
+    let rSum=0, gSum=0, bSum=0;
+    const lumVals = [];
+    finalPixels.forEach(([r,g,b])=>{
+      rSum+=r; gSum+=g; bSum+=b;
+      lumVals.push(lumOf(r,g,b));
+    });
+    const n = finalPixels.length;
+    const avgR = rSum/n, avgG = gSum/n, avgB = bSum/n;
+    const avgLum = lumVals.reduce((a,v)=>a+v,0) / lumVals.length;
+    const variance = lumVals.reduce((a,v)=>a + (v-avgLum)*(v-avgLum), 0) / lumVals.length;
+    callback({ r:avgR, g:avgG, b:avgB, avgLum, std: Math.sqrt(variance), sampleCount:n });
+  };
+  img.onerror = ()=> callback(null);
+  img.src = "data:" + (state.imageMime || "image/jpeg") + ";base64," + state.imageBase64;
+}
+
+function runDiagnosis(answers, photo){
+  let warm=0, cool=0, deep=0, soft=0, neutralCount=0;
+  Object.values(answers).forEach(val=>{
+    if(val==='warm') warm++;
+    else if(val==='cool') cool++;
+    else if(val==='deep') deep++;
+    else if(val==='soft') soft++;
+    else neutralCount++;
+  });
+
+  let photoNote;
+  let photoWeight = 0;
+  if(photo){
+    const warmthSignal = photo.r - photo.b; // R이 B보다 높으면 노란/황금빛(웜) 경향
+    // 신호가 강할수록 가중치가 커짐 (최대 8점, 설문 7문항 전체보다 더 크게 반영될 수 있음)
+    photoWeight = Math.min(8, Math.abs(warmthSignal) / 3);
+
+    if(warmthSignal > 6){
+      warm += photoWeight;
+      photoNote = `사진 속 피부는 노란빛·황금빛이 도는 톤으로 측정됐어요 (신호 강도 ${photoWeight.toFixed(1)}점 반영).`;
+    } else if(warmthSignal < -6){
+      cool += photoWeight;
+      photoNote = `사진 속 피부는 푸른빛·핑크빛이 도는 톤으로 측정됐어요 (신호 강도 ${photoWeight.toFixed(1)}점 반영).`;
+    } else {
+      photoNote = "사진상 피부 언더톤은 웜과 쿨의 중간 정도라 판단을 설문 쪽에 더 맡겼어요.";
+    }
+
+    // 명도 대비(딥/소프트)도 표준편차 신호 강도에 비례해 반영
+    const stdSignal = photo.std - 35; // 35를 중간 기준으로 사용
+    const depthWeight = Math.min(5, Math.abs(stdSignal) / 6);
+    if(stdSignal > 5) deep += depthWeight;
+    else if(stdSignal < -5) soft += depthWeight;
+  } else {
+    photoNote = "사진 분석 없이 설문 응답만으로 판단했어요.";
+  }
+
+  const isWarm = warm >= cool;
+  const isDeep = deep >= soft;
+
+  let season;
+  if(isWarm && isDeep) season = "autumn";
+  else if(isWarm && !isDeep) season = "spring";
+  else if(!isWarm && isDeep) season = "winter";
+  else season = "summer";
+
+  const axisGap = Math.abs(warm - cool);
+  const confidence = axisGap >= 3 ? "높음" : axisGap >= 1.5 ? "중간" : "낮음";
+
+  const reasoning = `설문 7문항과 사진 분석을 합산해 웜톤 ${warm.toFixed(1)}점, 쿨톤 ${cool.toFixed(1)}점으로 ${isWarm ? '웜' : '쿨'} 경향이 더 우세했어요. 명도대비는 ${isDeep ? '또렷한 대비(딥)' : '부드러운 대비(소프트)'} 쪽에 더 가까웠어요. ${photoNote}`;
+
+  const tipMap = {
+    spring: "조명이 밝은 세트에서는 톤이 묻히지 않도록 또렷한 코랄·오렌지 계열 의상으로 생기를 살려보세요.",
+    summer: "강한 조명 아래에서는 인상이 날카로워 보이지 않도록 쨍한 원색 대신 그레이시한 컬러를 추천해요.",
+    autumn: "다큐멘터리·시사 포맷처럼 안정감이 필요한 자리에서는 브라운·카키 계열이 신뢰감을 더해줘요.",
+    winter: "뉴스처럼 또렷한 전달력이 필요한 포맷에서는 블랙·네이비 같은 고대비 의상이 강점을 살려줘요."
+  };
+
+  return {
+    season,
+    confidence,
+    skin_observation: photoNote,
+    reasoning,
+    broadcast_tip: tipMap[season],
+    faceShape: computeFaceShape(answers)
+  };
+}
+
+document.getElementById('run-diagnosis').onclick = ()=>{
+  document.getElementById('loading-box').classList.add('active');
+  document.getElementById('run-diagnosis').disabled = true;
+  document.getElementById('debug-box').style.display = 'none';
+
+  sampleSkinTone((photo)=>{
+    try{
+      state.result = runDiagnosis(state.quizAnswers, photo);
+      renderResult();
+      goToStep(2);
+    }catch(err){
+      console.error(err);
+      const dbg = document.getElementById('debug-box');
+      dbg.style.display = 'block';
+      dbg.textContent =
+        "[에러 발생 위치] " + (err && err.stack ? err.stack : '(stack 없음)') + "\n\n" +
+        "[에러 메시지] " + (err && err.message) + "\n\n" +
+        "이 내용을 복사해서 알려주세요.";
+      alert("진단 중 오류가 발생했습니다. 아래 빨간 박스에 상세 내용이 표시됐어요.");
+    }finally{
+      document.getElementById('loading-box').classList.remove('active');
+      document.getElementById('run-diagnosis').disabled = false;
+    }
+  });
+};
+
+function renderResult(){
+  const r = state.result;
+  const info = SEASON_INFO[r.season] || SEASON_INFO.spring;
+  const faceInfo = FACE_SHAPE_INFO[r.faceShape] || FACE_SHAPE_INFO.oval;
+  const html = `
+    <div class="result-hero">
+      <div class="swatch-big" style="background:${info.color}"></div>
+      <div>
+        <h2 class="type-name">${info.name}</h2>
+        <p class="type-desc">${info.desc}</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3><span class="eyebrow">진단 근거</span>분석 내용</h3>
+      <p style="font-size:14px; margin:0 0 8px;">${r.skin_observation || ''}</p>
+      <p style="font-size:14px; margin:0 0 8px; color:rgba(22,21,18,0.7);">${r.reasoning || ''}</p>
+      <p style="font-size:13px; margin:0; color:var(--cool); font-weight:600;">📡 ${r.broadcast_tip || ''}</p>
+    </div>
+
+    <div class="card">
+      <h3><span class="eyebrow">컬러 팔레트</span>나에게 어울리는 컬러</h3>
+      <div class="palette-row">
+        ${info.palette.map(c=>`<div class="palette-chip"><div class="dot" style="background:${c}"></div>${c}</div>`).join('')}
+      </div>
+    </div>
+
+    <div class="card">
+      <h3><span class="eyebrow">의상</span>방송용 의상 가이드</h3>
+      <ul class="reco-list">
+        ${info.clothing.map((c,i)=>`<li><span class="lbl">${i===0?'추천':i===1?'포인트':'주의'}</span>${c}</li>`).join('')}
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3><span class="eyebrow">메이크업</span>카메라 발색 가이드</h3>
+      <ul class="reco-list">
+        ${info.makeup.map((c,i)=>`<li><span class="lbl">${i===0?'블러셔':i===1?'아이섀도우':'립'}</span>${c}</li>`).join('')}
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3><span class="eyebrow">헤어</span>추천 헤어 컬러 &amp; 스타일 (컬러 기준)</h3>
+      <div class="palette-row" style="margin-bottom:16px;">
+        ${info.hairColor.map(c=>`<div class="palette-chip"><div class="dot" style="background:${c}"></div>${c}</div>`).join('')}
+      </div>
+      <ul class="reco-list">
+        ${info.hairStyle.map((c,i)=>`<li><span class="lbl">${i===0?'길이/컷':i===1?'펌·질감':'주의'}</span>${c}</li>`).join('')}
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3><span class="eyebrow">얼굴형 분석</span>${faceInfo.name}</h3>
+      <p style="font-size:14px; margin:0 0 12px; color:rgba(22,21,18,0.7);">${faceInfo.desc}</p>
+      <ul class="reco-list">
+        ${faceInfo.tips.map((c,i)=>`<li><span class="lbl">${i===0?'길이/컷':i===1?'볼륨·가르마':'주의'}</span>${c}</li>`).join('')}
+      </ul>
+    </div>
+  `;
+  document.getElementById('result-content').innerHTML = html;
+}
+</script>
+</body>
+</html>
